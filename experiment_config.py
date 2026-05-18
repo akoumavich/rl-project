@@ -15,7 +15,7 @@ ENV_NAME = "Pendulum-v1"
 
 
 # Basic experiment settings
-NUM_EPISODES = 200
+NUM_EPISODES = 1000
 SEEDS = [0, 1, 2]
 HIDDEN_DIM = 256
 GAMMA = 0.9926973161132563

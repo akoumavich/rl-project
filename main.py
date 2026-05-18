@@ -2,6 +2,8 @@
 # Main script for running selected RL algorithms
 # ============================================
 
+import argparse
+
 from compare import (
     run_multi_seed,
     tune_one_param,
@@ -17,6 +19,35 @@ import experiment_config as cfg
 
 
 # ============================================
+# CLI arguments (override experiment_config.py)
+# ============================================
+
+_parser = argparse.ArgumentParser(description="Run RL experiments.")
+_parser.add_argument(
+    "--alg",
+    choices=["DQN", "PPO", "SAC", "TD3"],
+    default=None,
+    help="Algorithm to run. Overrides ALGORITHMS_TO_RUN in experiment_config.py."
+)
+_parser.add_argument(
+    "--env",
+    choices=[
+        "CartPole-v1",
+        "MountainCar-v0",
+        "Acrobot-v1",
+        "Pendulum-v1",
+        "MountainCarContinuous-v0",
+    ],
+    default=None,
+    help="Environment to run. Overrides ENV_NAME in experiment_config.py."
+)
+_args = _parser.parse_args()
+
+algorithms_to_run = [_args.alg] if _args.alg else cfg.ALGORITHMS_TO_RUN
+env_name = _args.env if _args.env else cfg.ENV_NAME
+
+
+# ============================================
 # Common configuration
 # ============================================
 
@@ -24,7 +55,7 @@ common_config = {
     "num_episodes": cfg.NUM_EPISODES,
     "hidden_dim": cfg.HIDDEN_DIM,
     "gamma": cfg.GAMMA,
-    "env_name": cfg.ENV_NAME
+    "env_name": env_name
 }
 
 
@@ -52,7 +83,7 @@ def get_action_space_type(env_name):
         )
 
 
-ACTION_SPACE_TYPE = get_action_space_type(cfg.ENV_NAME)
+ACTION_SPACE_TYPE = get_action_space_type(env_name)
 
 
 # ============================================
@@ -168,11 +199,11 @@ def should_skip_algorithm(algorithm_name, action_space_type):
 # Main experiment loop
 # ============================================
 
-for algorithm_name in cfg.ALGORITHMS_TO_RUN:
+for algorithm_name in algorithms_to_run:
 
     print("\n" + "=" * 60)
     print(f"Running algorithm: {algorithm_name}")
-    print(f"Environment: {cfg.ENV_NAME}")
+    print(f"Environment: {env_name}")
     print(f"Action space type: {ACTION_SPACE_TYPE}")
     print("=" * 60)
 
@@ -184,7 +215,7 @@ for algorithm_name in cfg.ALGORITHMS_TO_RUN:
 
     if should_skip_algorithm(algorithm_name, ACTION_SPACE_TYPE):
         print(
-            f"Skipping {algorithm_name} on {cfg.ENV_NAME}: "
+            f"Skipping {algorithm_name} on {env_name}: "
             f"{algorithm_name} is not compatible with {ACTION_SPACE_TYPE} action spaces."
         )
         continue
