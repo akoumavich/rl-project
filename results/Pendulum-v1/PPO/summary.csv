@@ -1,0 +1,11 @@
+experiment,param_name,param_value,final_mean_return,num_seeds,num_episodes
+baseline,baseline,baseline,-321.18858671530904,3,1000
+actor_lr_tuning,actor_lr,1e-05,-995.757266333808,3,1000
+actor_lr_tuning,actor_lr,0.0001,-274.8148389327239,3,1000
+actor_lr_tuning,actor_lr,0.0005,-717.081828655085,3,1000
+eps_tuning,eps,0.1,-310.69137567723305,3,1000
+eps_tuning,eps,0.2,-380.89652064682673,3,1000
+eps_tuning,eps,0.3,-278.86287535941,3,1000
+epochs_tuning,epochs,5,-696.3151902919832,3,1000
+epochs_tuning,epochs,10,-550.896159968199,3,1000
+epochs_tuning,epochs,15,-813.5902174389333,3,1000

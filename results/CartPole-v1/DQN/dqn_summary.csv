@@ -1,0 +1,16 @@
+experiment,param_name,param_value,final_mean_return,num_seeds,num_episodes
+baseline,baseline,baseline,316.6,3,500
+learning_rate_tuning,lr,0.0001,42.91666666666667,3,500
+learning_rate_tuning,lr,0.00025,406.23333333333335,3,500
+learning_rate_tuning,lr,0.0005,138.0,3,500
+learning_rate_tuning,lr,0.001,322.35,3,500
+epsilon_decay_steps_tuning,epsilon_decay_steps,5000,269.7,3,500
+epsilon_decay_steps_tuning,epsilon_decay_steps,10000,215.7,3,500
+epsilon_decay_steps_tuning,epsilon_decay_steps,20000,211.7333333333333,3,500
+target_update_tuning,target_update,5,206.4666666666667,3,500
+target_update_tuning,target_update,10,266.58333333333337,3,500
+target_update_tuning,target_update,20,338.56666666666666,3,500
+target_update_tuning,target_update,50,290.2833333333333,3,500
+batch_size_tuning,batch_size,32,114.41666666666667,3,500
+batch_size_tuning,batch_size,64,221.51666666666665,3,500
+batch_size_tuning,batch_size,128,428.83333333333337,3,500

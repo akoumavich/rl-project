@@ -1,0 +1,15 @@
+{
+    "env_name": "CartPole-v1",
+    "best_value": 450.21333333333337,
+    "best_params": {
+        "lr": 0.0015601373686407556,
+        "hidden_dim": 128,
+        "gamma": 0.9868868015197814,
+        "epsilon_end": 0.10170155525126623,
+        "epsilon_decay_steps": 3000,
+        "target_update": 20,
+        "buffer_size": 20000,
+        "minimal_size": 500,
+        "batch_size": 128
+    }
+}
