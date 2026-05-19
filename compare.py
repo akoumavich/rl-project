@@ -242,41 +242,49 @@ def plot_baseline_result(
     all_returns = baseline_result["all_returns"]  # (n_seeds, n_episodes)
     n_seeds = all_returns.shape[0]
 
+    t_val = stats.t.ppf(0.975, df=max(n_seeds - 1, 1))
+
+    # Raw stats
+    raw_mean = all_returns.mean(axis=0)
+    raw_std = all_returns.std(axis=0, ddof=1) if n_seeds > 1 else np.zeros_like(raw_mean)
+    raw_ci = t_val * raw_std / np.sqrt(n_seeds)
+
+    # Smoothed stats: smooth each seed independently, then aggregate
     smoothed = np.array([
         moving_average(all_returns[i], smooth_window)
         for i in range(n_seeds)
     ])
+    sm_mean = smoothed.mean(axis=0)
+    sm_std = smoothed.std(axis=0, ddof=1) if n_seeds > 1 else np.zeros_like(sm_mean)
+    sm_ci = t_val * sm_std / np.sqrt(n_seeds)
 
-    mean = smoothed.mean(axis=0)
-    std = smoothed.std(axis=0, ddof=1) if n_seeds > 1 else np.zeros_like(mean)
+    for data_mean, data_ci, suffix, title_suffix in [
+        (raw_mean, raw_ci, "raw",      "Raw"),
+        (sm_mean,  sm_ci,  "smoothed", f"Smoothed (window={smooth_window})"),
+    ]:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        x = np.arange(len(data_mean))
+        ax.plot(x, data_mean, label=f"{algorithm_name} (mean)")
+        ax.fill_between(x, data_mean - data_ci, data_mean + data_ci, alpha=0.2, label="95% CI")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Return")
+        ax.set_title(f"{algorithm_name} on {env_name} — {title_suffix}")
+        ax.legend()
+        ax.grid(alpha=0.3)
+        fig.tight_layout()
 
-    t_val = stats.t.ppf(0.975, df=max(n_seeds - 1, 1))
-    ci = t_val * std / np.sqrt(n_seeds)
+        if save:
+            figure_path = os.path.join(
+                output_dir,
+                f"{safe_algorithm_name}_baseline_{safe_env_name}_{suffix}.png"
+            )
+            fig.savefig(figure_path, dpi=300, bbox_inches="tight")
+            print(f"Saved figure to: {figure_path}")
 
-    x = np.arange(len(mean))
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(x, mean, label=f"{algorithm_name} (mean)")
-    plt.fill_between(x, mean - ci, mean + ci, alpha=0.2, label="95% CI")
-    plt.xlabel("Episode")
-    plt.ylabel("Return")
-    plt.title(f"{algorithm_name} Baseline on {env_name}")
-    plt.legend()
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-
-    if save:
-        figure_path = os.path.join(
-            output_dir,
-            f"{safe_algorithm_name}_baseline_{safe_env_name}.png"
-        )
-        plt.savefig(figure_path, dpi=300, bbox_inches="tight")
-        print(f"Saved figure to: {figure_path}")
-
-    if show:
-        plt.show()
-    else:
-        plt.close()
+        if show:
+            plt.show()
+        else:
+            plt.close(fig)
 
 
 def plot_tuning_results(
