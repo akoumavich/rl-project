@@ -6,12 +6,12 @@ import argparse
 
 from compare import (
     run_multi_seed,
-    tune_one_param,
     plot_baseline_result,
-    plot_tuning_results,
-    print_tuning_summary,
     save_experiment_results,
     save_episode_results_to_csv,
+    tune_with_optuna,
+    plot_optuna_results,
+    save_optuna_results,
 )
 
 import gymnasium as gym
@@ -251,368 +251,54 @@ for algorithm_name in algorithms_to_run:
     )
 
     # ============================================
-    # 2. Hyperparameter experiments
+    # 2. Optuna hyperparameter search
     # ============================================
-
-    tuning_results_dict = {}
 
     if cfg.RUN_TUNING:
 
-        # ============================================
-        # 2.1 DQN tuning
-        # ============================================
+        param_space = cfg.PARAM_SPACES.get(algorithm_name, {})
 
-        if algorithm_name == "DQN":
+        print(f"\n===== Optuna tuning: {algorithm_name} on {env_name} =====")
+        print(f"Trials: {cfg.N_TRIALS} | Params: {list(param_space.keys())}")
 
-            # Learning rate
-            lr_results = tune_one_param(
-                config,
-                "lr",
-                cfg.DQN_LR_VALUES,
-                seeds=cfg.SEEDS,
-                show_progress=True
-            )
+        study = tune_with_optuna(
+            config,
+            param_space,
+            n_trials=cfg.N_TRIALS,
+            seeds=cfg.SEEDS,
+        )
 
-            plot_tuning_results(
-                lr_results,
-                "lr",
-                output_dir=algorithm_figure_dir,
-                save=True,
-                show=False
-            )
+        print(f"\nBest params:            {study.best_params}")
+        print(f"Best final mean return: {study.best_value:.2f}")
 
-            print_tuning_summary(lr_results, "lr")
+        plot_optuna_results(
+            study,
+            param_space,
+            algorithm_name=algorithm_name,
+            env_name=env_name,
+            output_dir=algorithm_figure_dir,
+            save=True,
+            show=False,
+        )
 
-            tuning_results_dict["learning_rate_tuning"] = {
-                "param_name": "lr",
-                "results": lr_results
-            }
-
-            # Epsilon decay steps
-            epsilon_decay_results = tune_one_param(
-                config,
-                "epsilon_decay_steps",
-                cfg.DQN_EPSILON_DECAY_STEPS_VALUES,
-                seeds=cfg.SEEDS,
-                show_progress=True
-            )
-
-            plot_tuning_results(
-                epsilon_decay_results,
-                "epsilon_decay_steps",
-                output_dir=algorithm_figure_dir,
-                save=True,
-                show=False
-            )
-
-            print_tuning_summary(
-                epsilon_decay_results,
-                "epsilon_decay_steps"
-            )
-
-            tuning_results_dict["epsilon_decay_steps_tuning"] = {
-                "param_name": "epsilon_decay_steps",
-                "results": epsilon_decay_results
-            }
-
-            # Target update frequency
-            target_update_results = tune_one_param(
-                config,
-                "target_update",
-                cfg.DQN_TARGET_UPDATE_VALUES,
-                seeds=cfg.SEEDS,
-                show_progress=True
-            )
-
-            plot_tuning_results(
-                target_update_results,
-                "target_update",
-                output_dir=algorithm_figure_dir,
-                save=True,
-                show=False
-            )
-
-            print_tuning_summary(target_update_results, "target_update")
-
-            tuning_results_dict["target_update_tuning"] = {
-                "param_name": "target_update",
-                "results": target_update_results
-            }
-
-            # Batch size
-            batch_size_results = tune_one_param(
-                config,
-                "batch_size",
-                cfg.DQN_BATCH_SIZE_VALUES,
-                seeds=cfg.SEEDS,
-                show_progress=True
-            )
-
-            plot_tuning_results(
-                batch_size_results,
-                "batch_size",
-                output_dir=algorithm_figure_dir,
-                save=True,
-                show=False
-            )
-
-            print_tuning_summary(batch_size_results, "batch_size")
-
-            tuning_results_dict["batch_size_tuning"] = {
-                "param_name": "batch_size",
-                "results": batch_size_results
-            }
-
-        # ============================================
-        # 2.2 PPO tuning
-        # ============================================
-
-        elif algorithm_name == "PPO":
-
-            # Actor learning rate
-            actor_lr_results = tune_one_param(
-                config,
-                "actor_lr",
-                ppo_actor_lr_values,
-                seeds=cfg.SEEDS,
-                show_progress=True
-            )
-
-            plot_tuning_results(
-                actor_lr_results,
-                "actor_lr",
-                output_dir=algorithm_figure_dir,
-                save=True,
-                show=False
-            )
-
-            print_tuning_summary(actor_lr_results, "actor_lr")
-
-            tuning_results_dict["actor_lr_tuning"] = {
-                "param_name": "actor_lr",
-                "results": actor_lr_results
-            }
-
-            # PPO clipping epsilon
-            eps_results = tune_one_param(
-                config,
-                "eps",
-                ppo_eps_values,
-                seeds=cfg.SEEDS,
-                show_progress=True
-            )
-
-            plot_tuning_results(
-                eps_results,
-                "eps",
-                output_dir=algorithm_figure_dir,
-                save=True,
-                show=False
-            )
-
-            print_tuning_summary(eps_results, "eps")
-
-            tuning_results_dict["eps_tuning"] = {
-                "param_name": "eps",
-                "results": eps_results
-            }
-
-            # PPO update epochs
-            epochs_results = tune_one_param(
-                config,
-                "epochs",
-                ppo_epochs_values,
-                seeds=cfg.SEEDS,
-                show_progress=True
-            )
-
-            plot_tuning_results(
-                epochs_results,
-                "epochs",
-                output_dir=algorithm_figure_dir,
-                save=True,
-                show=False
-            )
-
-            print_tuning_summary(epochs_results, "epochs")
-
-            tuning_results_dict["epochs_tuning"] = {
-                "param_name": "epochs",
-                "results": epochs_results
-            }
-
-        # ============================================
-        # 2.3 SAC tuning
-        # ============================================
-
-        elif algorithm_name == "SAC":
-
-            # Actor learning rate
-            actor_lr_results = tune_one_param(
-                config,
-                "actor_lr",
-                cfg.SAC_ACTOR_LR_VALUES,
-                seeds=cfg.SEEDS,
-                show_progress=True
-            )
-
-            plot_tuning_results(
-                actor_lr_results,
-                "actor_lr",
-                output_dir=algorithm_figure_dir,
-                save=True,
-                show=False
-            )
-
-            print_tuning_summary(actor_lr_results, "actor_lr")
-
-            tuning_results_dict["actor_lr_tuning"] = {
-                "param_name": "actor_lr",
-                "results": actor_lr_results
-            }
-
-            # Alpha learning rate
-            alpha_lr_results = tune_one_param(
-                config,
-                "alpha_lr",
-                cfg.SAC_ALPHA_LR_VALUES,
-                seeds=cfg.SEEDS,
-                show_progress=True
-            )
-
-            plot_tuning_results(
-                alpha_lr_results,
-                "alpha_lr",
-                output_dir=algorithm_figure_dir,
-                save=True,
-                show=False
-            )
-
-            print_tuning_summary(alpha_lr_results, "alpha_lr")
-
-            tuning_results_dict["alpha_lr_tuning"] = {
-                "param_name": "alpha_lr",
-                "results": alpha_lr_results
-            }
-
-            # Soft update coefficient
-            tau_results = tune_one_param(
-                config,
-                "tau",
-                cfg.SAC_TAU_VALUES,
-                seeds=cfg.SEEDS,
-                show_progress=True
-            )
-
-            plot_tuning_results(
-                tau_results,
-                "tau",
-                output_dir=algorithm_figure_dir,
-                save=True,
-                show=False
-            )
-
-            print_tuning_summary(tau_results, "tau")
-
-            tuning_results_dict["tau_tuning"] = {
-                "param_name": "tau",
-                "results": tau_results
-            }
-
-        # ============================================
-        # 2.4 TD3 tuning
-        # ============================================
-
-        elif algorithm_name == "TD3":
-
-            # Actor learning rate
-            actor_lr_results = tune_one_param(
-                config,
-                "actor_lr",
-                cfg.TD3_ACTOR_LR_VALUES,
-                seeds=cfg.SEEDS,
-                show_progress=True
-            )
-
-            plot_tuning_results(
-                actor_lr_results,
-                "actor_lr",
-                output_dir=algorithm_figure_dir,
-                save=True,
-                show=False
-            )
-
-            print_tuning_summary(actor_lr_results, "actor_lr")
-
-            tuning_results_dict["actor_lr_tuning"] = {
-                "param_name": "actor_lr",
-                "results": actor_lr_results
-            }
-
-            # Soft update coefficient
-            tau_results = tune_one_param(
-                config,
-                "tau",
-                cfg.TD3_TAU_VALUES,
-                seeds=cfg.SEEDS,
-                show_progress=True
-            )
-
-            plot_tuning_results(
-                tau_results,
-                "tau",
-                output_dir=algorithm_figure_dir,
-                save=True,
-                show=False
-            )
-
-            print_tuning_summary(tau_results, "tau")
-
-            tuning_results_dict["tau_tuning"] = {
-                "param_name": "tau",
-                "results": tau_results
-            }
-
-            # Policy update delay
-            policy_delay_results = tune_one_param(
-                config,
-                "policy_delay",
-                cfg.TD3_POLICY_DELAY_VALUES,
-                seeds=cfg.SEEDS,
-                show_progress=True
-            )
-
-            plot_tuning_results(
-                policy_delay_results,
-                "policy_delay",
-                output_dir=algorithm_figure_dir,
-                save=True,
-                show=False
-            )
-
-            print_tuning_summary(policy_delay_results, "policy_delay")
-
-            tuning_results_dict["policy_delay_tuning"] = {
-                "param_name": "policy_delay",
-                "results": policy_delay_results
-            }
+        save_optuna_results(study, algorithm_output_dir, algorithm_name, env_name)
 
     else:
         print("\nSkipping hyperparameter tuning because RUN_TUNING = False.")
 
     # ============================================
-    # 3. Save all experiment data
+    # 3. Save baseline experiment data
     # ============================================
 
     save_experiment_results(
         baseline_result=baseline_result,
-        tuning_results_dict=tuning_results_dict,
+        tuning_results_dict={},
         output_dir=algorithm_output_dir
     )
 
     save_episode_results_to_csv(
         baseline_result=baseline_result,
-        tuning_results_dict=tuning_results_dict,
+        tuning_results_dict={},
         seeds=cfg.SEEDS,
         output_dir=algorithm_output_dir
     )

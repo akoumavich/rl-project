@@ -2,11 +2,15 @@
 # Experiment comparison, visualization, and saving
 # ============================================
 
+import json
 import os
+
 import numpy as np
+import optuna
 import pandas as pd
 import matplotlib.pyplot as plt
 import gymnasium as gym
+from scipy import stats
 
 from algorithms.dqn import train_dqn
 from algorithms.ppo_cartpole import train_ppo as train_ppo_discrete
@@ -224,7 +228,10 @@ def plot_baseline_result(
     show=True
 ):
     """
-    Plot and save the baseline learning curve.
+    Plot and save the baseline learning curve with a 95% CI band across seeds.
+
+    Each seed's return curve is smoothed independently. The CI is computed
+    from the smoothed per-seed curves using a t-distribution with (n-1) df.
     """
     os.makedirs(output_dir, exist_ok=True)
 
@@ -232,17 +239,27 @@ def plot_baseline_result(
     safe_algorithm_name = algorithm_name.replace(" ", "_")
     safe_env_name = env_name.replace("-", "_")
 
+    all_returns = baseline_result["all_returns"]  # (n_seeds, n_episodes)
+    n_seeds = all_returns.shape[0]
+
+    smoothed = np.array([
+        moving_average(all_returns[i], smooth_window)
+        for i in range(n_seeds)
+    ])
+
+    mean = smoothed.mean(axis=0)
+    std = smoothed.std(axis=0, ddof=1) if n_seeds > 1 else np.zeros_like(mean)
+
+    t_val = stats.t.ppf(0.975, df=max(n_seeds - 1, 1))
+    ci = t_val * std / np.sqrt(n_seeds)
+
+    x = np.arange(len(mean))
+
     plt.figure(figsize=(10, 6))
-
-    baseline_smooth = moving_average(
-        baseline_result["mean_returns"],
-        smooth_window
-    )
-
-    plt.plot(baseline_smooth, label=f"{algorithm_name} baseline")
-
+    plt.plot(x, mean, label=f"{algorithm_name} (mean)")
+    plt.fill_between(x, mean - ci, mean + ci, alpha=0.2, label="95% CI")
     plt.xlabel("Episode")
-    plt.ylabel("Average Return over Seeds")
+    plt.ylabel("Return")
     plt.title(f"{algorithm_name} Baseline on {env_name}")
     plt.legend()
     plt.grid(alpha=0.3)
@@ -525,3 +542,182 @@ def plot_algorithm_comparison(
         plt.show()
     else:
         plt.close()
+
+
+# ============================================
+# Optuna hyperparameter tuning
+# ============================================
+
+def tune_with_optuna(config, param_space, n_trials, seeds):
+    """
+    Use Optuna (TPE sampler) to jointly search over param_space.
+
+    param_space format: {name: (kind, low, high)}
+    kind is one of: "log_float", "float", "int", "log_int"
+
+    Returns an optuna.Study with completed trials.
+    """
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+    def objective(trial):
+        trial_config = config.copy()
+
+        for name, (kind, low, high) in param_space.items():
+            if kind == "log_float":
+                trial_config[name] = trial.suggest_float(name, low, high, log=True)
+            elif kind == "float":
+                trial_config[name] = trial.suggest_float(name, low, high)
+            elif kind == "int":
+                trial_config[name] = trial.suggest_int(name, low, high)
+            elif kind == "log_int":
+                trial_config[name] = trial.suggest_int(name, low, high, log=True)
+
+        result = run_multi_seed(trial_config, seeds=seeds, show_progress=False)
+        return result["final_mean"]
+
+    study = optuna.create_study(
+        direction="maximize",
+        sampler=optuna.samplers.TPESampler(seed=0)
+    )
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
+
+    return study
+
+
+def plot_optuna_results(
+    study,
+    param_space,
+    algorithm_name,
+    env_name,
+    output_dir,
+    save=True,
+    show=False
+):
+    """
+    Two figures:
+    1. Optimization history: objective value and running best vs trial number.
+    2. Per-parameter scatter: each param value vs objective, one subplot each.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    safe_algo = algorithm_name.replace(" ", "_")
+    safe_env = env_name.replace("-", "_")
+
+    trials_df = study.trials_dataframe()
+    objectives = trials_df["value"]
+    trial_nums = trials_df["number"]
+
+    # ---- 1. Optimization history ----
+    plt.figure(figsize=(10, 4))
+    plt.scatter(trial_nums, objectives, s=25, alpha=0.5, label="Trial")
+    plt.plot(trial_nums, objectives.cummax(), color="C1", label="Best so far")
+    plt.xlabel("Trial")
+    plt.ylabel("Final Mean Return")
+    plt.title(f"{algorithm_name} Optuna History on {env_name}")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+
+    if save:
+        path = os.path.join(
+            output_dir,
+            f"{safe_algo}_optuna_history_{safe_env}.png"
+        )
+        plt.savefig(path, dpi=300, bbox_inches="tight")
+        print(f"Saved figure to: {path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+    # ---- 2. Per-parameter scatter ----
+    param_names = [p for p in param_space if f"params_{p}" in trials_df.columns]
+
+    if not param_names:
+        return
+
+    ncols = min(len(param_names), 3)
+    nrows = (len(param_names) + ncols - 1) // ncols
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows))
+    axes_flat = np.array(axes).reshape(-1)
+
+    for ax, param_name in zip(axes_flat, param_names):
+        col = f"params_{param_name}"
+        kind = param_space[param_name][0]
+
+        x = trials_df[col]
+        y = objectives
+
+        ax.scatter(x, y, s=25, alpha=0.5)
+        ax.scatter(
+            [study.best_params[param_name]],
+            [study.best_value],
+            color="red", s=80, zorder=5, label="Best"
+        )
+
+        if "log" in kind:
+            ax.set_xscale("log")
+
+        ax.set_xlabel(param_name)
+        ax.set_ylabel("Final Mean Return")
+        ax.set_title(param_name)
+        ax.grid(alpha=0.3)
+        ax.legend(fontsize=8)
+
+    for ax in axes_flat[len(param_names):]:
+        ax.set_visible(False)
+
+    fig.suptitle(f"{algorithm_name} Parameter Scan on {env_name}", fontsize=13)
+    plt.tight_layout()
+
+    if save:
+        path = os.path.join(
+            output_dir,
+            f"{safe_algo}_optuna_params_{safe_env}.png"
+        )
+        plt.savefig(path, dpi=300, bbox_inches="tight")
+        print(f"Saved figure to: {path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
+def save_optuna_results(study, output_dir, algorithm_name, env_name):
+    """
+    Save Optuna trials to CSV and best params to JSON.
+
+    JSON is written alongside existing best-params files in
+    results/Best_Parameters/.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    trials_path = os.path.join(output_dir, "optuna_trials.csv")
+    study.trials_dataframe().to_csv(trials_path, index=False)
+    print(f"Saved Optuna trials to: {trials_path}")
+
+    best_params_dir = "results/Best_Parameters"
+    os.makedirs(best_params_dir, exist_ok=True)
+
+    safe_env = env_name.replace("/", "_")
+    best_params_path = os.path.join(
+        best_params_dir,
+        f"{algorithm_name.lower()}_best_params_{safe_env}.json"
+    )
+
+    with open(best_params_path, "w") as f:
+        json.dump(
+            {
+                "algorithm": algorithm_name,
+                "env_name": env_name,
+                "best_value": study.best_value,
+                "best_params": study.best_params,
+            },
+            f,
+            indent=2
+        )
+
+    print(f"Saved best params to: {best_params_path}")

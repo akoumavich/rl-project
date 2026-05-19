@@ -104,3 +104,37 @@ TD3_BATCH_SIZE = 256
 TD3_ACTOR_LR_VALUES = [1e-4, 3e-4, 1e-3]
 TD3_TAU_VALUES = [0.001, 0.005, 0.01]
 TD3_POLICY_DELAY_VALUES = [1, 2, 4]
+
+
+# ============================================
+# Optuna hyperparameter search settings
+# ============================================
+
+# Number of trials per Optuna study
+N_TRIALS = 15
+
+# Search spaces: {param_name: (kind, low, high)}
+# kind is one of: "log_float", "float", "int", "log_int"
+PARAM_SPACES = {
+    "DQN": {
+        "lr":                  ("log_float", 1e-4,  1e-2),
+        "epsilon_decay_steps": ("int",       2000,  30000),
+        "target_update":       ("int",       5,     50),
+        "batch_size":          ("int",       32,    256),
+    },
+    "PPO": {
+        "actor_lr": ("log_float", 1e-5, 1e-2),
+        "eps":      ("float",     0.05, 0.4),
+        "epochs":   ("int",       3,    20),
+    },
+    "SAC": {
+        "actor_lr": ("log_float", 1e-4, 1e-2),
+        "alpha_lr": ("log_float", 1e-4, 1e-2),
+        "tau":      ("log_float", 1e-3, 0.1),
+    },
+    "TD3": {
+        "actor_lr":     ("log_float", 1e-4, 1e-2),
+        "tau":          ("log_float", 1e-3, 0.1),
+        "policy_delay": ("int",       1,    5),
+    },
+}
