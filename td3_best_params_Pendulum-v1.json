@@ -1,0 +1,10 @@
+{
+  "algorithm": "TD3",
+  "env_name": "Pendulum-v1",
+  "best_value": -161.0882614242187,
+  "best_params": {
+    "actor_lr": 0.0026181476449711784,
+    "tau": 0.004579177516927515,
+    "policy_delay": 4
+  }
+}
