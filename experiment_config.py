@@ -48,10 +48,10 @@ PPO_CONTINUOUS_LMBDA = 0.95
 PPO_CONTINUOUS_EPOCHS = 7
 PPO_CONTINUOUS_EPS = 0.20771168925712913
 
-# SAC settings
+# SAC settings (original SAC: value network, no automatic entropy tuning)
 SAC_ACTOR_LR = 3e-4
 SAC_CRITIC_LR = 3e-3
-SAC_ALPHA_LR = 3e-4
+SAC_VALUE_LR = 3e-4
 SAC_TAU = 0.005
 SAC_BUFFER_SIZE = 10000
 SAC_MINIMAL_SIZE = 500
@@ -84,7 +84,7 @@ PPO_CONTINUOUS_EPOCHS_VALUES = [5, 10, 15]
 
 # SAC tuning values
 SAC_ACTOR_LR_VALUES = [1e-4, 3e-4, 1e-3]
-SAC_ALPHA_LR_VALUES = [1e-4, 3e-4, 1e-3]
+SAC_VALUE_LR_VALUES = [1e-4, 3e-4, 1e-3]
 SAC_TAU_VALUES = [0.001, 0.005, 0.01]
 
 
@@ -129,7 +129,7 @@ PARAM_SPACES = {
     },
     "SAC": {
         "actor_lr": ("log_float", 1e-4, 1e-2),
-        "alpha_lr": ("log_float", 1e-4, 1e-2),
+        "value_lr": ("log_float", 1e-4, 1e-2),
         "tau":      ("log_float", 1e-3, 0.1),
     },
     "TD3": {

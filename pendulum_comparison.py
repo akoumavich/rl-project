@@ -83,7 +83,7 @@ BASE_CONFIGS = {
         "algorithm":    "SAC",
         "actor_lr":     cfg.SAC_ACTOR_LR,
         "critic_lr":    cfg.SAC_CRITIC_LR,
-        "alpha_lr":     cfg.SAC_ALPHA_LR,
+        "value_lr":     cfg.SAC_VALUE_LR,
         "tau":          cfg.SAC_TAU,
         "buffer_size":  cfg.SAC_BUFFER_SIZE,
         "minimal_size": cfg.SAC_MINIMAL_SIZE,
@@ -333,6 +333,10 @@ def plot_combined(tuned_dict, output_dir):
 
 tuned_results = {}
 
+# Algorithms listed here are skipped entirely — existing saved results are
+# loaded instead. Set to set() to re-run everything from scratch.
+SKIP_ALGORITHMS = {"PPO"}
+
 for alg_name in ["PPO", "SAC", "TD3"]:
 
     print(f"\n{'=' * 60}")
@@ -343,6 +347,13 @@ for alg_name in ["PPO", "SAC", "TD3"]:
     param_space = PARAM_SPACES[alg_name]
     alg_dir     = f"{RESULTS_ROOT}/{alg_name}"
     figure_dir  = f"{alg_dir}/figures"
+
+    if alg_name in SKIP_ALGORITHMS:
+        print(f"\n[{alg_name}] Skipping — loading existing results.")
+        tuned_results[alg_name] = np.load(
+            os.path.join(alg_dir, "optuna_tuned_all_returns.npz")
+        )["optuna_tuned_all_returns"]
+        continue
 
     # ---- 1. Baseline ----
     print(f"\n[{alg_name}] Baseline ({len(SEEDS)} seeds, {NUM_EPISODES} episodes)")

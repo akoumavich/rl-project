@@ -130,7 +130,7 @@ def run_multi_seed(config, seeds=[0, 1, 2], show_progress=False):
             returns = train_sac(
                 actor_lr=config["actor_lr"],
                 critic_lr=config["critic_lr"],
-                alpha_lr=config["alpha_lr"],
+                value_lr=config["value_lr"],
                 num_episodes=config["num_episodes"],
                 hidden_dim=config["hidden_dim"],
                 gamma=config["gamma"],

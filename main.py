@@ -146,7 +146,7 @@ sac_config = {
     "algorithm": "SAC",
     "actor_lr": cfg.SAC_ACTOR_LR,
     "critic_lr": cfg.SAC_CRITIC_LR,
-    "alpha_lr": cfg.SAC_ALPHA_LR,
+    "value_lr": cfg.SAC_VALUE_LR,
     "tau": cfg.SAC_TAU,
     "buffer_size": cfg.SAC_BUFFER_SIZE,
     "minimal_size": cfg.SAC_MINIMAL_SIZE,
@@ -189,7 +189,7 @@ def should_skip_algorithm(algorithm_name, action_space_type):
     if action_space_type == "continuous" and algorithm_name == "DQN":
         return True
 
-    if action_space_type == "discrete" and algorithm_name == "TD3":
+    if action_space_type == "discrete" and algorithm_name in ("SAC", "TD3"):
         return True
 
     return False
